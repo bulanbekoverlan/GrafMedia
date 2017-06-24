@@ -127,6 +127,9 @@ public class SlideshowDialogFragment extends DialogFragment {
                     request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
                 }
 
+
+                //dqwedwqdeqwdqwd
+
                 try {
                     request.setDestinationInExternalPublicDir("PHOTO/",image.getName());
                 } catch (Exception e) {
