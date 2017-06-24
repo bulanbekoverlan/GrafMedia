@@ -10,6 +10,7 @@ import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
 
 import com.android.volley.Response;
@@ -51,7 +52,8 @@ public class MainActivity extends AppCompatActivity {
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
+        getSupportActionBar().setHomeButtonEnabled(true);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
 
         pDialog = new ProgressDialog(this);
@@ -92,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void fetchImages() {
 
-        pDialog.setMessage("Downloading json...");
+        pDialog.setMessage("Загрузка...");
         pDialog.show();
 
         JsonArrayRequest req = new JsonArrayRequest(endpoint,
@@ -137,6 +139,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public class ParseTask extends AsyncTask<Void, Void, String> {
+
+        @Override
+        protected void onPreExecute() {
+            pDialog.setMessage("Downloading json...");
+            pDialog.show();
+
+            super.onPreExecute();
+        }
 
         HttpURLConnection urlConnection = null;
         BufferedReader reader = null;
@@ -194,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
 
                     images.add(image);
                 }
-
+                pDialog.hide();
                 mAdapter.notifyDataSetChanged();
 
             } catch (JSONException e) {
@@ -203,4 +213,13 @@ public class MainActivity extends AppCompatActivity {
 
 
         }}
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id= item.getItemId();
+
+        if (id == android.R.id.home){
+            finish();
+        }
+        return super.onOptionsItemSelected(item);
+    }
 }

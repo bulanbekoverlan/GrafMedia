@@ -1,17 +1,18 @@
 package info.androidhive.glide.activity;
 
+import android.content.Intent;
+import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
-import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -20,52 +21,58 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
 
-import info.androidhive.glide.Folder;
 import info.androidhive.glide.R;
-import info.androidhive.glide.adapter.RVAdapter;
 
-public class FolderActivity extends AppCompatActivity {
-RecyclerView recyclerView;
-    Folder folder;
-    ArrayList<Folder> list;
-    RVAdapter rvAdapter;
-    String TAG= "TAG";
-    String idd;
+public class EnterActivity extends AppCompatActivity {
+Button enterBtn;
+    EditText password;
     DataBase dataBase;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_folder);
-
+        setContentView(R.layout.activity_enter);
+        enterBtn = (Button) findViewById(R.id.enterBtn);
+        password = (EditText) findViewById(R.id.password);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setHomeButtonEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
-        list = new ArrayList<>();
-        recyclerView.addItemDecoration(new DividerItemDecoration(this, LinearLayoutManager.VERTICAL));
         dataBase = new DataBase(this);
-        GridLayoutManager mGridLayoutManager = new GridLayoutManager(this, 2);
-        LinearLayoutManager llm = new LinearLayoutManager(this);
-        recyclerView.setLayoutManager(mGridLayoutManager);
-        recyclerView.setHasFixedSize(true);
-        idd = getIntent().getStringExtra("id");
-        new  ParseTask().execute();
-    }
+        dataBase.readData();
+        Cursor cursor = dataBase.getData();
+        if (cursor != null && cursor.getCount() > 0){
+            cursor.moveToFirst();
+            String pass = cursor.getString(cursor.getColumnIndex(DataBase.PASSWORD_COLUMN));
+            Log.e("pass",pass);
+        }
+        enterBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
 
+//                Intent i = new Intent(GlavActivity.this,FolderActivity.class);
+//                startActivity(i);
+                String pass = password.getText().toString();
+                new EnterActivity.ParseTask(pass).execute();
+            }
+        });
+    }
     public class ParseTask extends AsyncTask<Void, Void, String> {
 
         HttpURLConnection urlConnection = null;
         BufferedReader reader = null;
         String jsonResult = "";
 
+        String pass;
+        public ParseTask(String pass){
+            this.pass = pass;
+        }
+
         @Override
         protected String doInBackground(Void... params) {
 
             try {
-                URL url = new URL("http://193.124.117.95/api/v1/subfolder/?format=json&main_folder__id="+idd);
+                URL url = new URL("http://193.124.117.95/get_password?password="+pass);
 
 
                 urlConnection = (HttpURLConnection) url.openConnection();
@@ -93,48 +100,52 @@ RecyclerView recyclerView;
         @Override
         protected void onPostExecute(String json) {
             super.onPostExecute(json);
-            Log.e(TAG, json);
+            Log.e("TAG", json);
 
             JSONObject dataJsonObject;
-            String secondName;
+            String password;
             int ItemId;
             try {
                 dataJsonObject = new JSONObject(json);
-                JSONArray menus = dataJsonObject.getJSONArray("objects");
+                // JSONArray menus = dataJsonObject.getJSONArray("objects");
 
-                JSONObject secondObject = menus.getJSONObject(0);
-//                secondName = secondObject.getString("name");
+                // JSONObject secondObject = menus.getJSONObject(0);
+                password = dataJsonObject.getString("result");
+                Log.e("RESULT", password);
+                if (password.equals("Something went wrong")){
+                    Toast.makeText(EnterActivity.this, "Неправб", Toast.LENGTH_SHORT).show();
+                    EnterActivity.this.password.setError("неправильно");
+                }else{
+                    dataBase.deleteData();
+                    dataBase.addPassword(password);
+                    Intent i = new Intent(EnterActivity.this,FolderActivity.class);
+                    i.putExtra("id",password);
+                    startActivity(i);
+                    finish();
+                }
 //                Folder folder = new Folder();
 //                folder.setName(secondName);
 //                list.add(folder);
 
 //                Log.d(TAG, "Второе имя: " + secondName);
 //
-                for (int i = 0; i < menus.length(); i++) {
-                    JSONObject menu = menus.getJSONObject(i);
-
-                    secondName = menu.getString("name");
-                    ItemId = menu.getInt("id");
-                    Folder folder = new Folder();
-                    folder.setName(secondName);
-                    folder.setID(ItemId);
-                    list.add(folder);
-
-                }
-                rvAdapter = new RVAdapter(FolderActivity.this, list);
-                recyclerView.setAdapter(rvAdapter);
+//                for (int i = 0; i < menus.length(); i++) {
+//                    JSONObject menu = menus.getJSONObject(i);
+//
+//                    secondName = menu.getString("name");
+//                    ItemId = menu.getInt("id");
+//                    Folder folder = new Folder();
+//                    folder.setName(secondName);
+//                    folder.setID(ItemId);
+//                    list.add(folder);
+//
+//                }
 
             } catch (JSONException e) {
                 e.printStackTrace();
 
             }
         }
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_delete, menu);
-        return super.onCreateOptionsMenu(menu);
     }
 
     @Override
@@ -145,10 +156,6 @@ RecyclerView recyclerView;
             finish();
         }
 
-        if (id == R.id.action_delete){
-            dataBase.deleteData();
-            finish();
-        }
         return super.onOptionsItemSelected(item);
     }
 }
